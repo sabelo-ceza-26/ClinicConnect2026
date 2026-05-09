@@ -45,42 +45,9 @@ scan the QR code with Expo Go.
 
 **Emergency** — Real-time alerts, location tracking, first responder dispatch
 
-## Project Structure
-
-```
-ClinicConnect/
-├── src/
-│   ├── components/          # Button, Card, Input, Modal, LoadingSpinner, ErrorBoundary
-│   │
-│   ├── screens/
-│   │   ├── auth/            # Login, Register (2 steps), ForgotPassword, RoleSelection
-│   │   ├── patient/         # Home, Profile, EditProfile, HealthTips, NearbyClinics, ClinicDetail
-│   │   ├── appointments/    # SelectClinic → SelectService → SelectTimeSlot → Confirm → Success
-│   │   │                    # AppointmentDetail, AppointmentHistory
-│   │   ├── medical/         # MedicalRecord, DoctorMedicalRecord
-│   │   ├── notifications/   # Notifications, NotificationPreferences
-│   │   ├── staff/           # DoctorHome, NurseHome, PatientSearch, PatientDetailView
-│   │   ├── admin/           # Dashboard, ClinicManagement, ServicesManagement,
-│   │   │                    # TimeSlotManagement, StaffList, StaffProfile, AddStaff
-│   │   └── emergency/       # FirstResponderHome, EmergencyHistory
-│   │
-│   ├── navigation/          # AppNavigator, AuthNavigator, PatientNavigator,
-│   │                        # StaffNavigator, AdminNavigator, types
-│   ├── context/             # AuthContext, ThemeContext, NotificationContext, AppointmentContext
-│   ├── hooks/               # useAuth, useTheme, useNotifications, useAppointments, useDebounce
-│   ├── services/
-│   │   ├── api/             # client, auth, appointments, medical, clinics
-│   │   ├── storage/         # secureStorage, localStorage
-│   │   └── notifications/   # pushNotifications
-│   ├── utils/               # theme, constants, helpers, validators, formatters, permissions
-│   ├── types/               # Shared TypeScript definitions
-│   └── assets/              # images, fonts, animations
-│
-├── __tests__/               # Unit tests for components, screens, services, utils
-├── .env                     # Environment variables (not committed)
-├── .env.example             # Environment variable template
-├── app.json                 # Expo configuration
-└── tsconfig.json            # TypeScript configuration
+## Navigation Flow
+ 
+![ClinicConnect Navigation Flow](https://github.com/220212317/ClinicConnect/blob/master/clinicconnect_navigation_flow.svg)
 ```
 
 ## Troubleshooting
