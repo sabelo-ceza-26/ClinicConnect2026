@@ -60,20 +60,9 @@ const PatientRegistration = ({ navigation }: any) => {
   const { theme } = useTheme();
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [form, setForm] = React.useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    contactNumber: '',
-    idNumber: '',
-    gender: '',
-    ethnicity: '',
-    sms: false,
-    notifyEmail: false,
-    inApp: false,
+    firstName: '', lastName: '', email: '', password: '', confirmPassword: '', contactNumber: '',
+    idNumber: '', gender: '', ethnicity: '', sms: false, notifyEmail: false, inApp: false,
   });
-
   const updateField = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -149,39 +138,25 @@ const PatientRegistration = ({ navigation }: any) => {
 
         <View style={[styles.borderedBox, { borderColor: theme.colors.border }]}>
           <Input
-            label="First Name"
-            value={form.firstName}
-            onChangeText={(v) => updateField('firstName', v)}
-            autoCapitalize="words"
-            error={errors.firstName}
+            label="First Name" value={form.firstName} onChangeText={(v) => updateField('firstName', v)}
+            autoCapitalize="words" error={errors.firstName}
           />
           <Input
-            label="Last Name"
-            value={form.lastName}
-            onChangeText={(v) => updateField('lastName', v)}
-            autoCapitalize="words"
-            error={errors.lastName}
+            label="Last Name" value={form.lastName} onChangeText={(v) => updateField('lastName', v)}
+            autoCapitalize="words" error={errors.lastName}
           />
           <Input
-            label="ID Number"
-            value={form.idNumber}
-            onChangeText={(v) => updateField('idNumber', v)}
+            label="ID Number" value={form.idNumber} onChangeText={(v) => updateField('idNumber', v)}
             error={errors.idNumber}
           />
           <Input
-            label="Email"
-            value={form.email}
-            onChangeText={(v) => updateField('email', v)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={errors.email}
+            label="Email" value={form.email} onChangeText={(v) => updateField('email', v)} keyboardType="email-address"
+            autoCapitalize="none" error={errors.email}
           />
           <Input
-            label="Password"
-            value={form.password}
+            label="Password" value={form.password} 
             onChangeText={(v) => updateField('password', v)}
-            isPassword
-            autoCapitalize="none"
+            isPassword autoCapitalize="none" 
             error={errors.password}
           />
           <Input
@@ -262,68 +237,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+  scrollContent: { padding: 24, paddingTop: 60, paddingBottom: 40,
+},
+  backIcon: { marginBottom: 8, alignSelf: 'flex-start',
   },
-  backIcon: {
-    marginBottom: 8,
-    alignSelf: 'flex-start',
+  backIconText: {fontSize: 16, fontWeight: '600',
   },
-  backIconText: {
-    fontSize: 16,
-    fontWeight: '600',
+  header: { marginBottom: 12,
   },
-  header: {
-    marginBottom: 12,
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 4,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 4,
+  stepIndicator: { fontSize: 14, fontWeight: '500',
   },
-  stepIndicator: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E0E0E0',
-    marginBottom: 24,
+  progressBar: { height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', marginBottom: 24,
     overflow: 'hidden',
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
+  progressFill: { height: '100%', borderRadius: 2,
   },
-  borderedBox: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
+  borderedBox: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 12,
   },
-  optionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
+  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4,
   },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
+  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1,
   },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '500',
+  chipText: { fontSize: 14, fontWeight: '500',
   },
   fieldError: {
     fontSize: 12,

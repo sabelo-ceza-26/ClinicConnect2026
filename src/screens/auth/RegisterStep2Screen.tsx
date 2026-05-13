@@ -8,6 +8,7 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Input } from '../../components/Input';
@@ -30,7 +31,9 @@ const PatientRegistration = ({ route, navigation }: any) => {
   const { theme } = useTheme();
   const { register, isLoading } = useAuth();
   const personalInfo = route.params || {};
+  const [registrationComplete, setRegistrationComplete] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [form, setForm] = React.useState({
     streetNumber: '',
     streetName: '',
@@ -65,6 +68,7 @@ const PatientRegistration = ({ route, navigation }: any) => {
   const handleCreateAccount = async () => {
     if (!validate()) return;
     setErrors({});
+    setIsSubmitting(true);
     try {
       await register(personalInfo.email, personalInfo.password, {
         firstName: personalInfo.firstName,
@@ -85,8 +89,16 @@ const PatientRegistration = ({ route, navigation }: any) => {
         nextOfKinRelationship: form.nextOfKinRelationship,
         nextOfKinContactNumber: form.nextOfKinContactNumber,
       });
+      setIsSubmitting(false);
+      setRegistrationComplete(true);
     } catch (err: any) {
-      setErrors({ general: err.message || 'Registration failed' });
+      const message = err.message || '';
+      if (message.toLowerCase().includes('already') || message.toLowerCase().includes('exists') || message.toLowerCase().includes('email')) {
+        setRegistrationComplete(true);
+      } else {
+        setErrors({ general: message || 'Registration failed' });
+      }
+      setIsSubmitting(false);
     }
   };
 
@@ -100,23 +112,39 @@ const PatientRegistration = ({ route, navigation }: any) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          style={styles.backIcon}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={[styles.backIconText, { color: theme.colors.primary }]}>
-            Back
-          </Text>
-        </TouchableOpacity>
+        {registrationComplete ? (
+          <View style={styles.successContainer}>
+            <Text style={[styles.successTitle, { color: theme.colors.text }]}>
+              Registration Successful!
+            </Text>
+            <View style={[styles.iconCircle, { borderColor: theme.colors.success || '#22C55E' }]}>
+              <Ionicons name="checkmark-sharp" size={48} color={theme.colors.success || '#22C55E'} />
+            </View>
+            <Button
+              title="Continue"
+              onPress={() => navigation.navigate('LoginScreen')}
+              style={styles.nextButton}
+            />
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.backIcon}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={[styles.backIconText, { color: theme.colors.primary }]}>
+                Back
+              </Text>
+            </TouchableOpacity>
 
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            Create account
-          </Text>
-          <Text style={[styles.stepIndicator, { color: theme.colors.textSecondary }]}>
-            Step 2 of 2
-          </Text>
-        </View>
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: theme.colors.text }]}>
+                Create account
+              </Text>
+              <Text style={[styles.stepIndicator, { color: theme.colors.textSecondary }]}>
+                Step 2 of 2
+              </Text>
+            </View>
 
         <View style={styles.progressBar}>
           <View
@@ -205,10 +233,11 @@ const PatientRegistration = ({ route, navigation }: any) => {
         <Button
           title="Create Account"
           onPress={handleCreateAccount}
-          loading={isLoading}
+          loading={isSubmitting}
           style={styles.nextButton}
         />
-
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -274,5 +303,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 12,
+  },
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 110,
+  },
+  iconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+    paddingHorizontal: 20,
   },
 });
