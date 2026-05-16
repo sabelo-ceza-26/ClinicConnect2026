@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-} from "react-native";
+}
+ from "react-native";
 
 // ---------------------------------------------------------------------------
 // LoginScreen Component
