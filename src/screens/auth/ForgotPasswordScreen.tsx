@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
 
   // ── Header ──────────────────────────────────────────────────────────────
   header: {
-    backgroundColor: "#d4b896", // warm beige
+    backgroundColor: "#ffffff", // warm beige
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
