@@ -9,9 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 }
  from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../../context/AuthContext";
 
 // ---------------------------------------------------------------------------
 // LoginScreen Component
@@ -29,11 +32,25 @@ import { useNavigation } from "@react-navigation/native";
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { login } = useAuth();
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleSignIn = () => {
-    navigation.navigate("PatientHome" as never);
+  const handleSignIn = async () => {
+    if (!username.trim() || !password.trim()) {
+      Alert.alert("Error", "Please enter your username and password.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await login(username.trim(), password);
+      navigation.reset({ index: 0, routes: [{ name: "PatientHome" as never }] });
+    } catch (error: any) {
+      Alert.alert("Login Failed", error.message || "Invalid credentials. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -109,8 +126,16 @@ const LoginScreen: React.FC = () => {
             </View>
 
             {/* SIGN IN BUTTON — dark navy, full width */}
-            <TouchableOpacity style={styles.btnPrimary} onPress={handleSignIn}>
-              <Text style={styles.btnPrimaryText}>Sign in</Text>
+            <TouchableOpacity
+              style={[styles.btnPrimary, loading && styles.btnDisabled]}
+              onPress={handleSignIn}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.btnPrimaryText}>Sign in</Text>
+              )}
             </TouchableOpacity>
 
             {/* OR divider */}
@@ -124,7 +149,7 @@ const LoginScreen: React.FC = () => {
             {/* Staff login line at the bottom */}
             <View style={styles.staffRow}>
               <Text style={styles.staffText}>Staff? </Text>
-              <TouchableOpacity onPress={() => { /* TODO: Staff login */ }}>
+              <TouchableOpacity onPress={() => navigation.navigate("StaffLogin" as never)}>
                 <Text style={styles.staffLink}>Sign in with staff ID</Text>
               </TouchableOpacity>
             </View>
@@ -280,6 +305,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
+  },
+
+  btnDisabled: {
+    opacity: 0.6,
   },
 
   // "OR" divider text
