@@ -1,11 +1,11 @@
-// src/screens/notifications/NotificationsScreen.tsx
+// src/screens/patient/AlertsScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function NotificationsScreen() {
+export default function AlertsScreen() {
   return (
     <View style={styles.container}>
-      <Text>Notifications Screen</Text>
+      <Text>Alerts Screen</Text>
     </View>
   );
 }
