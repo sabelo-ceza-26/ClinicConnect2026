@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+// src/screens/patient/NearbyClinicsScreen.tsx
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +13,20 @@ import {
   ActivityIndicator,
   RefreshControl,
   Animated,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { supabase } from '../../services/supabase/client';
+import {
+  getBestLocation,
+  getAddressFromCoordinates,
+  CAPE_TOWN_COORDINATES,
+  calculateDistance,
+  formatDistance,
+} from '../../utils/location';
 
 export interface Clinic {
   id: string;
@@ -33,6 +43,8 @@ export interface Clinic {
   rating: number;
   waitTime?: string;
   acceptingWalkins?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 type FilterOption = 'all' | 'open' | 'nearby' | 'antenatal';
@@ -42,21 +54,26 @@ export default function NearbyClinicsScreen() {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const scrollY = useRef(new Animated.Value(0)).current;
-  
+
+  const [clinics, setClinics] = useState<Clinic[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<FilterOption>('all');
   const [selectedSort, setSelectedSort] = useState<SortOption>('distance');
   const [expandedClinic, setExpandedClinic] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(true);
+  const [searchArea, setSearchArea] = useState('Cape Town, Western Cape');
 
   const isWeb = Platform.OS === 'web';
   const isDesktop = isWeb && width >= 1024;
   const isTablet = isWeb && width >= 768 && width < 1024;
   const contentMaxWidth = isDesktop ? 1200 : isTablet ? 768 : '100%';
 
- const filters: { id: FilterOption; label: string; icon: string }[] = [
+  const filters: { id: FilterOption; label: string; icon: string }[] = [
     { id: 'all', label: 'All', icon: 'apps-outline' },
     { id: 'open', label: 'Open Now', icon: 'time-outline' },
     { id: 'nearby', label: '< 5 km', icon: 'navigate-outline' },
@@ -69,93 +86,140 @@ export default function NearbyClinicsScreen() {
     { id: 'name', label: 'Name' },
   ];
 
- const clinics: Clinic[] = [
-    {
-      id: '1',
-      name: 'Adriaanse Clinic',
-      distance: '1.2 km',
-      distanceKm: 1.2,
-      hours: '07:30 - 16:30',
-      openTime: '07:30',
-      closeTime: '16:30',
-      status: 'open',
-      services: ['General Consultation', 'Maternity', 'Vaccinations', 'HIV Testing'],
-      address: '15 Adriaanse Street, Cape Town',
-      phone: '+27 21 123 4567',
-      rating: 4.5,
-      waitTime: '15-30 min',
-      acceptingWalkins: true,
-    },
-    {
-      id: '2',
-      name: 'Albow Gardens Community Day Centre',
-      distance: '2.5 km',
-      distanceKm: 2.5,
-      hours: '07:30 - 16:30',
-      openTime: '07:30',
-      closeTime: '16:30',
-      status: 'open',
-      services: ['General Consultation', 'HIV Testing', 'TB Screening', 'Counseling'],
-      address: '98 Albow Gardens, Cape Town',
-      phone: '+27 21 234 5678',
-      rating: 4.2,
-      waitTime: '10-20 min',
-      acceptingWalkins: true,
-    },
-    {
-      id: '3',
-      name: 'Delft South Clinic',
-      distance: '3.8 km',
-      distanceKm: 3.8,
-      hours: '07:30 - 16:30',
-      openTime: '07:30',
-      closeTime: '16:30',
-      status: 'closing_soon',
-      services: ['General Consultation', 'Pediatrics', 'Maternity', 'Nutrition'],
-      address: '45 Delft Main Road, Delft',
-      phone: '+27 21 345 6789',
-      rating: 4.7,
-      waitTime: '45-60 min',
-      acceptingWalkins: false,
-    },
-    {
-      id: '4',
-      name: 'Eastridge Clinic',
-      distance: '4.2 km',
-      distanceKm: 4.2,
-      hours: '08:00 - 16:30',
-      openTime: '08:00',
-      closeTime: '16:30',
-      status: 'open',
-      services: ['General Consultation', 'Maternity', 'Nutrition', 'Vaccinations'],
-      address: '12 Eastridge, Mitchells Plain',
-      phone: '+27 21 456 7890',
-      rating: 4.0,
-      waitTime: '20-35 min',
-      acceptingWalkins: true,
-    },
-    {
-      id: '5',
-      name: 'Hanover Park Clinic',
-      distance: '1.8 km',
-      distanceKm: 1.8,
-      hours: '08:00 - 16:30',
-      openTime: '08:00',
-      closeTime: '16:30',
-      status: 'open',
-      services: ['General Consultation', 'Mental Health', 'Vaccinations', 'Pharmacy'],
-      address: '27 Hanover Park Avenue, Hanover Park',
-      phone: '+27 21 567 8901',
-      rating: 4.3,
-      waitTime: '25-40 min',
-      acceptingWalkins: true,
-    },
-  ];
+  // Get user location with best available method
+  const getUserLocationAndAddress = async () => {
+    try {
+      setIsLocating(true);
+      setLocationError(null);
+
+      const location = await getBestLocation();
+
+      setUserLocation(location);
+
+      if (
+        location.latitude === CAPE_TOWN_COORDINATES.latitude &&
+        location.longitude === CAPE_TOWN_COORDINATES.longitude
+      ) {
+        setLocationError('Using default location (Cape Town)');
+        setSearchArea('Cape Town, Western Cape');
+      } else {
+        try {
+          const address = await getAddressFromCoordinates(location);
+          if (address) {
+            setSearchArea(address);
+          } else {
+            setSearchArea('Cape Town, Western Cape');
+          }
+        } catch (addressError) {
+          console.log('Could not get address, using default:', addressError);
+          setSearchArea('Cape Town, Western Cape');
+        }
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      setLocationError('Unable to get your location. Showing Cape Town clinics.');
+      setUserLocation(CAPE_TOWN_COORDINATES);
+      setSearchArea('Cape Town, Western Cape');
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  // Fetch clinics from Supabase
+  const fetchClinics = async () => {
+    try {
+      setIsLoading(true);
+
+      const { data, error } = await supabase
+        .from('clinics')
+        .select(`
+          *,
+          services:services (
+            id,
+            service_name,
+            description,
+            estimated_duration
+          )
+        `)
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setClinics([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const locationToUse = userLocation || CAPE_TOWN_COORDINATES;
+
+      const formattedClinics: Clinic[] = data.map((clinic: any) => {
+        let distanceKm = 0;
+        let distance = 'N/A';
+
+        if (clinic.latitude && clinic.longitude) {
+          distanceKm = calculateDistance(
+            locationToUse.latitude,
+            locationToUse.longitude,
+            clinic.latitude,
+            clinic.longitude
+          );
+          distance = formatDistance(distanceKm);
+        }
+
+        const serviceNames = clinic.services?.map((s: any) => s.service_name) || [];
+        const status: 'open' | 'closed' | 'closing_soon' = clinic.status === 'active' ? 'open' : 'closed';
+
+        return {
+          id: clinic.id,
+          name: clinic.clinic_name,
+          distance: distance,
+          distanceKm: distanceKm,
+          hours: clinic.operating_hours || 'Mon - Fri: 07:30 - 16:30',
+          openTime: '07:30',
+          closeTime: '16:30',
+          status: status,
+          services: serviceNames,
+          address: clinic.address || clinic.location || '',
+          phone: clinic.phone || clinic.contact_details || '',
+          rating: 4.0 + Math.random() * 0.8,
+          waitTime: distanceKm < 3 ? '10-20 min' : distanceKm < 5 ? '20-35 min' : '30-45 min',
+          acceptingWalkins: Math.random() > 0.3,
+          latitude: clinic.latitude,
+          longitude: clinic.longitude,
+        };
+      });
+
+      formattedClinics.sort((a, b) => a.distanceKm - b.distanceKm);
+
+      setClinics(formattedClinics);
+    } catch (error) {
+      console.error('Failed to fetch clinics:', error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Initialize
+  useEffect(() => {
+    const init = async () => {
+      await getUserLocationAndAddress();
+    };
+    init();
+  }, []);
+
+  // Fetch clinics when user location is set
+  useEffect(() => {
+    if (userLocation !== null) {
+      fetchClinics();
+    }
+  }, [userLocation]);
 
   const filteredAndSortedClinics = useMemo(() => {
     let filtered = [...clinics];
 
-  if (searchQuery) {
+    if (searchQuery) {
       filtered = filtered.filter(clinic =>
         clinic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         clinic.address.toLowerCase().includes(searchQuery.toLowerCase())
@@ -170,13 +234,19 @@ export default function NearbyClinicsScreen() {
         filtered = filtered.filter(clinic => clinic.distanceKm <= 5);
         break;
       case 'antenatal':
-        filtered = filtered.filter(clinic => clinic.services.includes('Maternity'));
+        filtered = filtered.filter(clinic =>
+          clinic.services.some(s =>
+            s.toLowerCase().includes('maternity') ||
+            s.toLowerCase().includes('antenatal') ||
+            s.toLowerCase().includes('pregnancy')
+          )
+        );
         break;
       default:
         break;
     }
 
-   filtered.sort((a, b) => {
+    filtered.sort((a, b) => {
       switch (selectedSort) {
         case 'distance':
           return a.distanceKm - b.distanceKm;
@@ -194,9 +264,8 @@ export default function NearbyClinicsScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setRefreshing(false);
+    await getUserLocationAndAddress();
+    await fetchClinics();
   }, []);
 
   const handleClinicPress = useCallback((clinicId: string) => {
@@ -204,11 +273,27 @@ export default function NearbyClinicsScreen() {
   }, []);
 
   const handleBookAppointment = useCallback((clinic: Clinic) => {
-    console.log('Book appointment for:', clinic.name);
-    //navigation.navigate('BookAppointment', { clinic });
+    const foundClinic = clinics.find(c => c.id === clinic.id);
+    if (foundClinic) {
+      navigation.navigate('BookAppointment', { clinicId: foundClinic.id });
+    }
+  }, [clinics, navigation]);
+
+  const handleOpenMaps = useCallback((clinic: Clinic) => {
+    if (clinic.latitude && clinic.longitude) {
+      const url = `https://maps.google.com/maps?q=${clinic.latitude},${clinic.longitude}`;
+      Linking.openURL(url);
+    } else {
+      const url = `https://maps.google.com/maps?q=${encodeURIComponent(clinic.address)}`;
+      Linking.openURL(url);
+    }
   }, []);
 
- const getStatusInfo = (status: Clinic['status']) => {
+  const handleCall = useCallback((phone: string) => {
+    Linking.openURL(`tel:${phone}`);
+  }, []);
+
+  const getStatusInfo = (status: Clinic['status']) => {
     switch (status) {
       case 'open':
         return { color: '#4CAF50', text: 'Open', icon: 'checkmark-circle' };
@@ -249,15 +334,6 @@ export default function NearbyClinicsScreen() {
   const ClinicCard = ({ item }: { item: Clinic }) => {
     const statusInfo = getStatusInfo(item.status);
     const isExpanded = expandedClinic === item.id;
-    const animatedHeight = useRef(new Animated.Value(0)).current;
-
-    React.useEffect(() => {
-      Animated.timing(animatedHeight, {
-        toValue: isExpanded ? 1 : 0,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    }, [isExpanded]);
 
     return (
       <TouchableOpacity
@@ -265,7 +341,6 @@ export default function NearbyClinicsScreen() {
         onPress={() => handleClinicPress(item.id)}
         activeOpacity={0.7}
       >
-        {/* Header */}
         <View style={styles.clinicHeader}>
           <View style={styles.clinicInfo}>
             <View style={styles.clinicNameRow}>
@@ -298,17 +373,16 @@ export default function NearbyClinicsScreen() {
           />
         </View>
 
-        {/* Expandable Content */}
         {isExpanded && (
-          <Animated.View style={[styles.expandedContent]}>
-            <View style={styles.infoRow}>
+          <View style={styles.expandedContent}>
+            <TouchableOpacity style={styles.infoRow} onPress={() => handleCall(item.phone)}>
               <Ionicons name="call-outline" size={18} color="#666" />
               <Text style={styles.infoText}>{item.phone}</Text>
-            </View>
-            <View style={styles.infoRow}>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.infoRow} onPress={() => handleOpenMaps(item)}>
               <Ionicons name="location-outline" size={18} color="#666" />
-              <Text style={styles.infoText}>{item.address}</Text>
-            </View>
+              <Text style={[styles.infoText, styles.linkText]}>{item.address}</Text>
+            </TouchableOpacity>
             {item.waitTime && (
               <View style={styles.infoRow}>
                 <Ionicons name="hourglass-outline" size={18} color="#666" />
@@ -332,7 +406,7 @@ export default function NearbyClinicsScreen() {
               <Text style={styles.bookButtonText}>Book Appointment</Text>
               <Ionicons name="arrow-forward" size={16} color="#FFF" />
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         )}
       </TouchableOpacity>
     );
@@ -343,6 +417,27 @@ export default function NearbyClinicsScreen() {
     outputRange: [1, 0.95],
     extrapolate: 'clamp',
   });
+
+  if (isLoading || isLocating) {
+    return (
+      <LinearGradient
+        colors={['#B08968', '#FFFFFF', '#FFFFFF']}
+        locations={[0, 0.25, 0.5]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.gradientContainer}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6B7C5C" />
+            <Text style={styles.loadingText}>
+              {isLocating ? 'Getting your location...' : 'Loading clinics...'}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -356,7 +451,6 @@ export default function NearbyClinicsScreen() {
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
         <Animated.View style={{ opacity: headerOpacity }}>
-          {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="#333" />
@@ -364,15 +458,14 @@ export default function NearbyClinicsScreen() {
             <Text style={[styles.headerTitle, isDesktop && styles.headerTitleDesktop]}>
               Nearby Clinics
             </Text>
-            <TouchableOpacity 
-              style={styles.sortButton} 
+            <TouchableOpacity
+              style={styles.sortButton}
               onPress={() => setShowSortMenu(!showSortMenu)}
             >
               <Ionicons name="funnel-outline" size={22} color="#333" />
             </TouchableOpacity>
           </View>
 
-          {/* Sort Menu */}
           {showSortMenu && (
             <View style={styles.sortMenu}>
               {sortOptions.map(option => (
@@ -401,13 +494,14 @@ export default function NearbyClinicsScreen() {
             </View>
           )}
 
-          {/* Location Info */}
           <View style={styles.locationContainer}>
             <Ionicons name="location" size={20} color="#4A90D9" />
-            <Text style={styles.locationText}>Cape Town, Western Cape</Text>
+            <Text style={styles.locationText}>{searchArea}</Text>
+            {locationError && (
+              <Ionicons name="warning-outline" size={16} color="#FF9800" />
+            )}
           </View>
 
-          {/* Search Bar */}
           <View style={styles.searchContainer}>
             <Ionicons name="search-outline" size={20} color="#999" style={styles.searchIcon} />
             <TextInput
@@ -424,7 +518,6 @@ export default function NearbyClinicsScreen() {
             )}
           </View>
 
-          {/* Filter Chips */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -459,7 +552,6 @@ export default function NearbyClinicsScreen() {
           </ScrollView>
         </Animated.View>
 
-        {/* Results Count */}
         <View style={styles.resultsHeader}>
           <Text style={[styles.resultsTitle, isDesktop && styles.resultsTitleDesktop]}>
             {filteredAndSortedClinics.length} Clinic{filteredAndSortedClinics.length !== 1 ? 's' : ''} Found
@@ -469,53 +561,45 @@ export default function NearbyClinicsScreen() {
           </Text>
         </View>
 
-        {/* Clinics List */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#6B7C5C" />
-            <Text style={styles.loadingText}>Loading clinics...</Text>
-          </View>
-        ) : (
-          <Animated.ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.listContent,
-              { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }
-            ]}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7C5C']} />
-            }
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-              { useNativeDriver: false }
-            )}
-            scrollEventThrottle={16}
-          >
-            {filteredAndSortedClinics.length > 0 ? (
-              filteredAndSortedClinics.map((clinic) => (
-                <ClinicCard key={clinic.id} item={clinic} />
-              ))
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="business-outline" size={64} color="#CCC" />
-                <Text style={styles.emptyTitle}>No clinics found</Text>
-                <Text style={styles.emptyText}>
-                  Try adjusting your search or filter criteria
-                </Text>
-                <TouchableOpacity
-                  style={styles.clearButton}
-                  onPress={() => {
-                    setSearchQuery('');
-                    setSelectedFilter('all');
-                  }}
-                >
-                  <Text style={styles.clearButtonText}>Clear Filters</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            <View style={{ height: isDesktop ? 32 : 20 }} />
-          </Animated.ScrollView>
-        )}
+        <Animated.ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.listContent,
+            { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' },
+          ]}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6B7C5C']} />
+          }
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+        >
+          {filteredAndSortedClinics.length > 0 ? (
+            filteredAndSortedClinics.map((clinic) => (
+              <ClinicCard key={clinic.id} item={clinic} />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="business-outline" size={64} color="#CCC" />
+              <Text style={styles.emptyTitle}>No clinics found</Text>
+              <Text style={styles.emptyText}>
+                Try adjusting your search or filter criteria
+              </Text>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSelectedFilter('all');
+                }}
+              >
+                <Text style={styles.clearButtonText}>Clear Filters</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <View style={{ height: isDesktop ? 32 : 20 }} />
+        </Animated.ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -527,6 +611,16 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
   header: {
     flexDirection: 'row',
@@ -595,6 +689,7 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 14,
     color: '#666',
+    flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -669,16 +764,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
   },
   clinicCard: {
     backgroundColor: '#FFF',
@@ -776,6 +861,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#555',
     flex: 1,
+  },
+  linkText: {
+    color: '#4A90D9',
+    textDecorationLine: 'underline',
   },
   walkinBadge: {
     backgroundColor: '#E8F5E9',
