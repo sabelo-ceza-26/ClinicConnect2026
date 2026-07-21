@@ -73,13 +73,17 @@ const PatientRegistration = ({ navigation }: any) => {
     if (!form.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!form.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!form.email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Invalid email address';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Email must contain @';
     if (!form.password) newErrors.password = 'Password is required';
-    else if (form.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
+    else if (form.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    else if (!/\d/.test(form.password)) newErrors.password = 'Password must contain a number';
+    else if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) newErrors.password = 'Password must contain a special character';
     if (!form.confirmPassword) newErrors.confirmPassword = 'Confirm your password';
     else if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     if (!form.contactNumber.trim()) newErrors.contactNumber = 'Contact number is required';
+    else if (!/^\d{10}$/.test(form.contactNumber.trim())) newErrors.contactNumber = 'Contact number must be 10 digits';
     if (!form.idNumber.trim()) newErrors.idNumber = 'ID number is required';
+    else if (!/^\d{13}$/.test(form.idNumber.trim())) newErrors.idNumber = 'ID number must be 13 digits';
     if (!form.gender) newErrors.gender = 'Please select your gender';
     if (!form.ethnicity) newErrors.ethnicity = 'Please select your ethnicity';
     if (!form.sms && !form.notifyEmail && !form.inApp) {
@@ -147,7 +151,7 @@ const PatientRegistration = ({ navigation }: any) => {
           />
           <Input
             label="ID Number" value={form.idNumber} onChangeText={(v) => updateField('idNumber', v)}
-            error={errors.idNumber}
+            keyboardType="numeric" maxLength={13} error={errors.idNumber}
           />
           <Input
             label="Email" value={form.email} onChangeText={(v) => updateField('email', v)} keyboardType="email-address"
@@ -172,6 +176,7 @@ const PatientRegistration = ({ navigation }: any) => {
             value={form.contactNumber}
             onChangeText={(v) => updateField('contactNumber', v)}
             keyboardType="phone-pad"
+            maxLength={10}
             error={errors.contactNumber}
           />
 

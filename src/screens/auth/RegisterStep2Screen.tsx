@@ -57,10 +57,12 @@ const PatientRegistration = ({ route, navigation }: any) => {
     if (!form.streetName.trim()) newErrors.streetName = 'Street name is required';
     if (!form.city.trim()) newErrors.city = 'City is required';
     if (!form.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
+    else if (!/^\d{4}$/.test(form.postalCode.trim())) newErrors.postalCode = 'Postal code must be 4 digits';
     if (!form.province) newErrors.province = 'Please select your province';
     if (!form.nextOfKinName.trim()) newErrors.nextOfKinName = 'Next of kin name is required';
     if (!form.nextOfKinRelationship.trim()) newErrors.nextOfKinRelationship = 'Relationship is required';
     if (!form.nextOfKinContactNumber.trim()) newErrors.nextOfKinContactNumber = 'Contact number is required';
+    else if (!/^\d{10}$/.test(form.nextOfKinContactNumber.trim())) newErrors.nextOfKinContactNumber = 'Contact number must be 10 digits';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

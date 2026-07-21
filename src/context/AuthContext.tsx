@@ -3,6 +3,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '../services/supabase/client';
 import { PatientProfile } from '../services/api/profile';
 import { Session, User } from '@supabase/supabase-js';
+import { UserRole } from '../types';
+
+const ROLE_STORAGE_KEY = '@clinicconnect_user_role';
 
 interface AuthContextType {
   user: User | null;

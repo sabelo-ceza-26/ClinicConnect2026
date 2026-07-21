@@ -72,7 +72,7 @@ const StaffLoginScreen: React.FC = () => {
 
       console.log(`🔑 Attempting login with email: ${staffData.email}`);
 
-      // Login with staff email
+      // Try to login with staff email
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: staffData.email,
         password: password,
@@ -95,11 +95,6 @@ const StaffLoginScreen: React.FC = () => {
       console.log('✅ Login successful:', loginData.user.email);
       setIsLoading(false);
 
-      // Navigate based on role
-      const role = staffData.role?.toLowerCase() || 'staff';
-      console.log(`👤 User role: ${role}`);
-
-      // Show success message
       Alert.alert(
         "Success",
         `Welcome ${staffData.first_name} ${staffData.last_name}!`,
@@ -107,14 +102,12 @@ const StaffLoginScreen: React.FC = () => {
           {
             text: "Continue",
             onPress: () => {
-              // Navigate to AdminDashboard for admin role
+              // Navigate to AdminDashboard based on role
+              const role = staffData.role?.toLowerCase() || 'staff';
               if (role === 'admin') {
                 navigation.replace('AdminDashboard');
-              } else if (role === 'doctor' || role === 'nurse') {
-                // Navigate to StaffDashboard (you can create this later)
-                navigation.replace('AdminDashboard'); // Temporary fallback
               } else {
-                navigation.replace('AdminDashboard'); // Default fallback
+                navigation.replace('AdminDashboard');
               }
             }
           }
