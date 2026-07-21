@@ -1,3 +1,4 @@
+// src/screens/auth/RegisterStep2Screen.tsx
 import React from 'react';
 import {
   View,
@@ -70,7 +71,7 @@ const PatientRegistration = ({ route, navigation }: any) => {
     setErrors({});
     setIsSubmitting(true);
     try {
-      await register(personalInfo.email, personalInfo.password, {
+      const newProfile = await register(personalInfo.email, personalInfo.password, {
         firstName: personalInfo.firstName,
         lastName: personalInfo.lastName,
         contactNumber: personalInfo.contactNumber,
@@ -89,16 +90,31 @@ const PatientRegistration = ({ route, navigation }: any) => {
         nextOfKinRelationship: form.nextOfKinRelationship,
         nextOfKinContactNumber: form.nextOfKinContactNumber,
       });
+      
       setIsSubmitting(false);
       setRegistrationComplete(true);
+      
+      // Navigate after a short delay to show success screen
+      setTimeout(() => {
+        navigation.navigate('PatientHome');
+      }, 1500);
+      
     } catch (err: any) {
       const message = err.message || '';
-      if (message.toLowerCase().includes('already') || message.toLowerCase().includes('exists') || message.toLowerCase().includes('email')) {
+      // Check if it's a duplicate email error or user already exists
+      if (message.toLowerCase().includes('already') || 
+          message.toLowerCase().includes('exists') || 
+          message.toLowerCase().includes('email') ||
+          message.toLowerCase().includes('duplicate')) {
         setRegistrationComplete(true);
+        // Navigate to home after showing success
+        setTimeout(() => {
+          navigation.navigate('PatientHome');
+        }, 1500);
       } else {
-        setErrors({ general: message || 'Registration failed' });
+        setErrors({ general: message || 'Registration failed. Please try again.' });
+        setIsSubmitting(false);
       }
-      setIsSubmitting(false);
     }
   };
 
@@ -120,6 +136,10 @@ const PatientRegistration = ({ route, navigation }: any) => {
             <View style={[styles.iconCircle, { borderColor: theme.colors.success || '#22C55E' }]}>
               <Ionicons name="checkmark-sharp" size={48} color={theme.colors.success || '#22C55E'} />
             </View>
+            <Text style={[styles.successSubtitle, { color: theme.colors.textSecondary }]}>
+              Your account has been created successfully.{'\n'}
+              You will be redirected to the home screen.
+            </Text>
             <Button
               title="Continue"
               onPress={() => navigation.navigate('PatientHome')}
@@ -146,96 +166,96 @@ const PatientRegistration = ({ route, navigation }: any) => {
               </Text>
             </View>
 
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { backgroundColor: theme.colors.primary, width: '100%' },
-            ]}
-          />
-        </View>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { backgroundColor: theme.colors.primary, width: '100%' },
+                ]}
+              />
+            </View>
 
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Address
-        </Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Address
+            </Text>
 
-        <View style={[styles.borderedBox, { borderColor: theme.colors.border }]}>
-          <Input
-            label="Street Number"
-            value={form.streetNumber}
-            onChangeText={(v) => updateField('streetNumber', v)}
-            error={errors.streetNumber}
-          />
-          <Input
-            label="Street Name"
-            value={form.streetName}
-            onChangeText={(v) => updateField('streetName', v)}
-            autoCapitalize="words"
-            error={errors.streetName}
-          />
-          <Input
-            label="City"
-            value={form.city}
-            onChangeText={(v) => updateField('city', v)}
-            autoCapitalize="words"
-            error={errors.city}
-          />
-          <Input
-            label="Postal Code"
-            value={form.postalCode}
-            onChangeText={(v) => updateField('postalCode', v)}
-            keyboardType="numeric"
-            error={errors.postalCode}
-          />
-          <Dropdown
-            label="Province"
-            value={form.province}
-            options={PROVINCE_OPTIONS}
-            onSelect={(v) => updateField('province', v)}
-            error={errors.province}
-          />
-        </View>
+            <View style={[styles.borderedBox, { borderColor: theme.colors.border }]}>
+              <Input
+                label="Street Number"
+                value={form.streetNumber}
+                onChangeText={(v) => updateField('streetNumber', v)}
+                error={errors.streetNumber}
+              />
+              <Input
+                label="Street Name"
+                value={form.streetName}
+                onChangeText={(v) => updateField('streetName', v)}
+                autoCapitalize="words"
+                error={errors.streetName}
+              />
+              <Input
+                label="City"
+                value={form.city}
+                onChangeText={(v) => updateField('city', v)}
+                autoCapitalize="words"
+                error={errors.city}
+              />
+              <Input
+                label="Postal Code"
+                value={form.postalCode}
+                onChangeText={(v) => updateField('postalCode', v)}
+                keyboardType="numeric"
+                error={errors.postalCode}
+              />
+              <Dropdown
+                label="Province"
+                value={form.province}
+                options={PROVINCE_OPTIONS}
+                onSelect={(v) => updateField('province', v)}
+                error={errors.province}
+              />
+            </View>
 
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Next of Kin
-        </Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Next of Kin
+            </Text>
 
-        <View style={[styles.borderedBox, { borderColor: theme.colors.border }]}>
-          <Input
-            label="Full Name"
-            value={form.nextOfKinName}
-            onChangeText={(v) => updateField('nextOfKinName', v)}
-            autoCapitalize="words"
-            error={errors.nextOfKinName}
-          />
-          <Input
-            label="Relationship"
-            value={form.nextOfKinRelationship}
-            onChangeText={(v) => updateField('nextOfKinRelationship', v)}
-            autoCapitalize="words"
-            error={errors.nextOfKinRelationship}
-          />
-          <Input
-            label="Contact Number"
-            value={form.nextOfKinContactNumber}
-            onChangeText={(v) => updateField('nextOfKinContactNumber', v)}
-            keyboardType="phone-pad"
-            error={errors.nextOfKinContactNumber}
-          />
-        </View>
+            <View style={[styles.borderedBox, { borderColor: theme.colors.border }]}>
+              <Input
+                label="Full Name"
+                value={form.nextOfKinName}
+                onChangeText={(v) => updateField('nextOfKinName', v)}
+                autoCapitalize="words"
+                error={errors.nextOfKinName}
+              />
+              <Input
+                label="Relationship"
+                value={form.nextOfKinRelationship}
+                onChangeText={(v) => updateField('nextOfKinRelationship', v)}
+                autoCapitalize="words"
+                error={errors.nextOfKinRelationship}
+              />
+              <Input
+                label="Contact Number"
+                value={form.nextOfKinContactNumber}
+                onChangeText={(v) => updateField('nextOfKinContactNumber', v)}
+                keyboardType="phone-pad"
+                error={errors.nextOfKinContactNumber}
+              />
+            </View>
 
-        {errors.general && (
-          <Text style={[styles.generalError, { color: theme.colors.error }]}>
-            {errors.general}
-          </Text>
-        )}
+            {errors.general && (
+              <Text style={[styles.generalError, { color: theme.colors.error }]}>
+                {errors.general}
+              </Text>
+            )}
 
-        <Button
-          title="Create Account"
-          onPress={handleCreateAccount}
-          loading={isSubmitting}
-          style={styles.nextButton}
-        />
+            <Button
+              title="Create Account"
+              onPress={handleCreateAccount}
+              loading={isSubmitting}
+              style={styles.nextButton}
+            />
           </>
         )}
       </ScrollView>
